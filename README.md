@@ -1,5 +1,5 @@
 # gorescuedogs
-gorescuedogs is a Go-based web scraper that retrieves dog listings from [Oregon Dog Rescue](https://www.oregondogrescue.org/)'s website using the Petfinder API.
+gorescuedogs is a Go-based command-line tool that retrieves dog listings from [Oregon Dog Rescue](https://www.oregondogrescue.org/)'s website using the Petfinder API.
 
 ## Getting Started
 
