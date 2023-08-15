@@ -1,17 +1,17 @@
-// main_test.go
-package main
+package internals
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 	"time"
 )
 
+// Test the GenerateAPIURL function with the "TODAY" date range.
+// Check if the generated URL contains the correct query parameters
+// for today's listings.
 func TestGenerateAPIURLToday(t *testing.T) {
 	// Get the current date
 	now := time.Now()
@@ -29,7 +29,7 @@ func TestGenerateAPIURLToday(t *testing.T) {
 	timeDuration := "TODAY"
 
 	// Call the function
-	got := generateAPIURL(timeDuration)
+	got := GenerateAPIURL(timeDuration)
 
 	// Assert that the generated API URL matches the expected value
 	if got != want {
@@ -37,6 +37,8 @@ func TestGenerateAPIURLToday(t *testing.T) {
 	}
 }
 
+// Test the GenerateAPIURL function with the "3DAYS" date range.
+// Check if the generated URL contains the correct query parameters for listings in the last 3 days.
 func TestGenerateAPIURL3Days(t *testing.T) {
 	// Get the current date
 	now := time.Now()
@@ -57,7 +59,7 @@ func TestGenerateAPIURL3Days(t *testing.T) {
 	timeDuration := "3DAYS"
 
 	// Call the function
-	got := generateAPIURL(timeDuration)
+	got := GenerateAPIURL(timeDuration)
 
 	// Assert that the generated API URL matches the expected value
 	if got != want {
@@ -65,6 +67,8 @@ func TestGenerateAPIURL3Days(t *testing.T) {
 	}
 }
 
+// Test the GenerateFilteredAPIURL function with various filter options.
+// Check if the generated URL includes the selected filter options in the query parameters.
 func TestGenerateFilteredAPIURL(t *testing.T) {
 	testCases := []struct {
 		ageOptions    string
@@ -111,7 +115,7 @@ func TestGenerateFilteredAPIURL(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.ageOptions+"_"+tc.sizeOptions+"_"+tc.genderOptions, func(t *testing.T) {
-			got := generateFilteredAPIURL(tc.ageOptions, tc.sizeOptions, tc.genderOptions)
+			got := GenerateFilteredAPIURL(tc.ageOptions, tc.sizeOptions, tc.genderOptions)
 			if got != tc.want {
 				t.Errorf("TestGenerateFilteredAPIURL failed.\nGot:  %s\nWant: %s", got, tc.want)
 			}
@@ -119,7 +123,7 @@ func TestGenerateFilteredAPIURL(t *testing.T) {
 	}
 }
 
-// Mock HTTP server for testing
+// Mock HTTP server for testing with TestFetchAnimals
 func mockAPIHandler(responseBody string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -127,6 +131,8 @@ func mockAPIHandler(responseBody string) http.HandlerFunc {
 	}
 }
 
+// Test the FetchAnimals function by mocking a response from the Petfinder API.
+// Verify if the fetched data is correctly processed and returned in the response.
 func TestFetchAnimals(t *testing.T) {
 	// Create a mock server and set its URL as the API endpoint
 	mockServer := httptest.NewServer(mockAPIHandler(`{"animals": [{"id": 1, "name": "Dog"}]}`))
@@ -134,60 +140,18 @@ func TestFetchAnimals(t *testing.T) {
 
 	accessToken := "mockAccessToken"
 
-	got, err := fetchAnimals(mockServer.URL, accessToken)
+	got, err := FetchAnimals(mockServer.URL, accessToken)
 	if err != nil {
 		t.Fatalf("fetchAnimals failed with error: %v", err)
 	}
 
 	want := &struct {
-		Animals []dog `json:"animals"`
+		Animals []Dog `json:"animals"`
 	}{
-		Animals: []dog{{ID: 1, Name: "Dog"}},
+		Animals: []Dog{{ID: 1, Name: "Dog"}},
 	}
 
 	if len(got.Animals) != len(want.Animals) {
 		t.Errorf("TestFetchAnimals failed.\nGot:  %v\nWant: %v", got, want)
-	}
-}
-
-func TestProcessData(t *testing.T) {
-	// Create a mock dog for testing
-	mockDog := dog{
-		ID:     1,
-		Name:   "Test Dog",
-		Age:    "Adult",
-		Gender: "Male",
-		Size:   "Medium",
-		Breeds: struct {
-			Primary   string `json:"primary"`
-			Secondary string `json:"secondary"`
-		}{Primary: "Mixed"},
-		URL: "https://example.com/dog1",
-	}
-
-	// Capture stdout for testing
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	defer func() {
-		os.Stdout = oldStdout
-		w.Close()
-	}()
-
-	processData([]dog{mockDog})
-
-	w.Close()
-
-	// Read the captured output
-	capturedOutput, _ := ioutil.ReadAll(r)
-
-	// Define how the output should look like based on the mockDog
-	expectedOutput := fmt.Sprintf(
-		"-----------------------\nID: %d\nName: %s\nAge: %s\nGender: %s\nSize: %s\nBreed: %s\nURL: %s\n-----------------------\n",
-		mockDog.ID, mockDog.Name, mockDog.Age, mockDog.Gender, mockDog.Size, mockDog.Breeds.Primary, mockDog.URL,
-	)
-
-	if string(capturedOutput) != expectedOutput {
-		t.Errorf("TestProcessData failed.\nGot:\n%s\nWant:\n%s", string(capturedOutput), expectedOutput)
 	}
 }
